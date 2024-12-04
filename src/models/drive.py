@@ -28,10 +28,18 @@ class Drive():
     def get_optimal_state(self):
         return self.optimal_state
     
-    def get_drive(self):
-        differences = torch.abs(self.optimal_state - self.internal_state) ** self.n
+    def get_drive(self, state=None):
+        if state is None:
+            state = self.internal_state
+        differences = torch.abs(self.optimal_state - state) ** self.n
         weighted_sum = torch.sum(self.state_weights * differences)
         return weighted_sum ** (1 / self.m)
+    
+    def get_reward(self, new_state):
+        current_drive = self.get_drive()
+        next_drive = self.get_drive(new_state)
+
+        return current_drive - next_drive
 
     def __str__(self):
         return f"Internal state: {self.internal_state}"
