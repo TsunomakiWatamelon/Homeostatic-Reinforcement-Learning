@@ -24,7 +24,8 @@ $RECYCLE.BIN/
 *.lnk
 
 # WSL
-.Identifier
+*.Identifier
+
 
 
 # End of https://mrkandreev.name/snippets/gitignore-generator/#Windows,wsl
