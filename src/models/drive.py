@@ -4,13 +4,13 @@ class Drive:
     def __init__(self, len_state, optimal_state, state_weights=None, n=1, m=1):
         self.len_state = len_state
         self.internal_state = torch.zeros(len_state)
-        self.optimal_state = torch.tensor(optimal_state, dtype=torch.float32)
+        self.optimal_state = torch.as_tensor(optimal_state, dtype=torch.float32)
         self.n = n
         self.m = m
-        self.state_weights = torch.ones(len_state) if state_weights is None else torch.tensor(state_weights, dtype=torch.float32)
+        self.state_weights = torch.ones(len_state) if state_weights is None else torch.as_tensor(state_weights, dtype=torch.float32)
     
     def update_state(self, state):
-        self.internal_state = torch.tensor(state, dtype=torch.float32)
+        self.internal_state = torch.as_tensor(state, dtype=torch.float32)
 
     def get_state(self):
         return self.internal_state
@@ -27,7 +27,7 @@ class Drive:
     def get_drive(self, state=None):
         if state is None:
             state = self.internal_state
-        state = torch.tensor(state, dtype=torch.float32)
+        state = torch.as_tensor(state, dtype=torch.float32)
         differences = torch.abs(self.optimal_state - state) ** self.n
         weighted_sum = torch.sum(self.state_weights * differences)
         drive = weighted_sum ** (1 / self.m)

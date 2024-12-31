@@ -6,8 +6,8 @@ class HomeostaticEnvironment:
         """
         Initialise l'environnement homéostatique.
         """
-        self.state = torch.tensor(H, dtype=torch.float32)  # État interne initial
-        self.effects = {key: torch.tensor(value, dtype=torch.float32) for key, value in effects.items()}  # Effets des actions
+        self.state = torch.as_tensor(H, dtype=torch.float32)  # État interne initial
+        self.effects = {key: torch.as_tensor(value, dtype=torch.float32) for key, value in effects.items()}  # Effets des actions
 
         # Initialisation de l'objet Drive
         self.drive = Drive(len_state=len(H), optimal_state=setpoints, state_weights=weights, n=exponents[0], m=exponents[1])
