@@ -1,7 +1,7 @@
 import numpy as np
 
 class QLearning:
-    def __init__(self, state_size, action_size, alpha=0.1, gamma=0.99, epsilon=0.1):
+    def __init__(self, state_size, action_size, alpha=0.1, gamma=0.99, epsilon=0.1, q_table=None):
         """
         Implémente un agent Q-learning.
         """
@@ -12,7 +12,10 @@ class QLearning:
         self.epsilon = epsilon  # Probabilité d'exploration
 
         # Initialisation de la table Q avec des zéros
-        self.q_table = np.zeros((state_size, action_size))
+        if q_table is not None:
+            self.q_table = q_table
+        else:
+            self.q_table = np.zeros((state_size, action_size))
 
     def choose_action(self, state):
         """
@@ -22,7 +25,7 @@ class QLearning:
         """
         if np.random.rand() < self.epsilon:
             # Exploration : choisir une action aléatoire
-            return np.random.randint(self.action_size)
+            return np.random.randint(len(self.q_table[state]))
         else:
             # Exploitation : choisir l'action avec la plus grande valeur Q
             return np.argmax(self.q_table[state])

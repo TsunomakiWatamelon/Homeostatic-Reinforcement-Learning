@@ -8,6 +8,7 @@ class AnticipatoryEnvironment(HomeostaticEnvironment):
         :param signal_timesteps: Temps avant l'injection où le signal est donné.
         """
         super().__init__(H, setpoints, weights, exponents, effects)
+        self.initial_state = self.state.clone()
         self.signal_timesteps = signal_timesteps  # Moments où le signal est donné
         self.injection_timesteps = injection_timesteps # Moments où l'injection est donnée
         self.current_timestep = 0
@@ -45,7 +46,7 @@ class AnticipatoryEnvironment(HomeostaticEnvironment):
         reward = self.drive.get_reward(new_state)
 
         # Avancer dans le temps
-        self.current_timestep += 1
+        self.current_timestep += 0.5 # 0.5 == 30 minutes == 0.5
         done = self.current_timestep >= self.max_timestep
 
         return self.state, reward, done, self.current_markov_state
@@ -62,21 +63,23 @@ class AnticipatoryEnvironment(HomeostaticEnvironment):
 
         if event is not None:
             if event == "injection":
-                self.injections.append(EthanolInjection(self.current_timestep))
+                self.injections.append(EthanolInjection(self.current_timestep + 0.5))
             else:
                 raise ValueError(f"Événement inconnu : {event}")
+        return
     
     def update_state(self):
         """
         Met à jour l'état interne en fonction des conditions de l'environnement.
         """
         # Effets des injections
-        offset = torch.as_tensor([0.0] * len(self.state), dtype=torch.float32)
+        offset = torch.as_tensor(0, dtype=torch.float32)
+        add = 0
         for injection in self.injections:
             offset += injection.get_effect(self.current_timestep)
         for anticipation in self.anticipations:
             offset += anticipation.get_effect(self.current_timestep)
-        self.state += offset
+        self.state = self.initial_state.clone() + offset
         
 
 
@@ -88,19 +91,37 @@ class AnticipatoryEnvironment(HomeostaticEnvironment):
         self.state = self.drive.optimal_state.clone()
         self.drive.update_state(self.state)
         self.current_markov_state = 0
+        self.anticipations = []
+        self.injections = []
         return self.state, self.current_markov_state
     
 class EthanolInjection():
     def __init__(self, injection_timestep):
-        self.injection_timestep = injection_timestep
+        self.injection_timestep = torch.as_tensor(injection_timestep, dtype=torch.float32)
     
-    def ethanol_curve(self, t, drop=-1.5, recovery_rate=0.2):
-        drop = torch.as_tensor(drop, dtype=torch.float32)
-        recovery_rate = torch.as_tensor(recovery_rate, dtype=torch.float32)
-        if t <= 0:
-            return 0
-        return drop * torch.exp(-recovery_rate * t)  # Récupération exponentielle
-    
+    def ethanol_curve(self, t):
+        t = torch.as_tensor(t, dtype=torch.float32)
+        t_injection = torch.tensor(1, dtype=torch.float32)
+        
+        if t <= t_injection:
+            return torch.tensor(0.0, dtype=torch.float32)
+        
+        t = t - t_injection  # Adjust time for injection
+        a = torch.tensor(-0.15, dtype=torch.float32)
+        b = torch.tensor(-0.05, dtype=torch.float32)
+        c = torch.tensor(0.5, dtype=torch.float32)
+        k = torch.tensor(0.5, dtype=torch.float32)
+        t_peak = torch.tensor(2.0, dtype=torch.float32)
+        t_decay = torch.tensor(5.0, dtype=torch.float32)
+
+        if t < t_peak:  # Quadratic rise
+            return a * t**2
+        elif t_peak <= t < t_decay:  # Quadratic fall
+            return -b * (t - t_peak)**2 + a * t_peak**2
+        else:  # Exponential decay
+            return -c * torch.exp(-k * (t - t_decay))
+
+        
     def get_effect(self, t):
         """
         Renvoie l'effet de l'injection
@@ -109,20 +130,23 @@ class EthanolInjection():
 
 class ToleranceResponse():
     def __init__(self, response_timestep):
-        self.response_timestep = response_timestep
+        self.response_timestep = torch.as_tensor(response_timestep)
     
-    def tolerance_response_curve(self, t, peak=1.2, peak_time=3, rise_power=0.5, decay_rate=0.2):
-        peak = torch.as_tensor(peak, dtype=torch.float32)
-        peak_time = torch.as_tensor(peak_time, dtype=torch.float32)
-        rise_power = torch.as_tensor(rise_power, dtype=torch.float32)
-        decay_rate = torch.as_tensor(decay_rate, dtype=torch.float32)
-        if t <= 0:
-            return 0
-        elif t <= peak_time:
-            # Augmentation exponentielle jusqu'au pic
-            return peak * ((t / peak_time) ** rise_power)
-        else:
-            return peak * torch.exp(-decay_rate * (t - peak_time))  # Décroissance exponentielle
+    def tolerance_response_curve(self, t):
+        t = torch.as_tensor(t, dtype=torch.float32)
+        t_start = torch.tensor(0.0, dtype=torch.float32)
+        t = t - t_start  # Adjust time for injection
+        a = torch.tensor(0.15, dtype=torch.float32)
+        b = torch.tensor(0.15, dtype=torch.float32)
+        c = torch.tensor(-0.7, dtype=torch.float32)
+        k = torch.tensor(0.2, dtype=torch.float32)
+        t_peak = torch.tensor(3.0, dtype=torch.float32)
+        t_decay = torch.tensor(5.5, dtype=torch.float32)
+
+        if t < t_decay:  # Quadratic response
+            return -b * (t - t_peak)**2 + a * t_peak**2
+        else:  # Exponential decay
+            return -c * torch.exp(-k * (t - t_decay))
 
     def get_effect(self, t):
         """
