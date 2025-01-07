@@ -46,11 +46,16 @@ class QLearning:
         td_error = td_target - self.q_table[state][action]
         self.q_table[state][action] += self.alpha * td_error
 
+
     def reset(self):
         """
         Réinitialise la table Q à des zéros.
         """
-        self.q_table = np.zeros((self.state_size, self.action_size))
+        if type(self.q_table) == np.ndarray:
+            self.q_table.fill(0)
+        else:
+            for key in self.q_table.keys():
+                self.q_table[key].fill(0)
 
     def get_q_table(self):
         return self.q_table
