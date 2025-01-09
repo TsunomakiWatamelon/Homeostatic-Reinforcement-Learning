@@ -1,4 +1,5 @@
 import numpy as np
+import copy
 
 class QLearning:
     def __init__(self, state_size, action_size, alpha=0.1, gamma=0.99, epsilon=0.1, q_table=None):
@@ -13,7 +14,7 @@ class QLearning:
 
         # Initialisation de la table Q avec des zéros
         if q_table is not None:
-            self.q_table = q_table
+            self.q_table = copy.deepcopy(q_table)
         else:
             self.q_table = np.zeros((state_size, action_size))
 
@@ -23,12 +24,22 @@ class QLearning:
         :param state: État courant.
         :return: Action choisie (entier entre 0 et action_size - 1).
         """
+        # Vérification de l'existence de l'état dans la table Q
+        if state not in self.q_table:
+            raise KeyError(f"L'état {state} n'existe pas dans la table Q.")
+
+        # Vérification que des actions sont disponibles
+        if len(self.q_table[state]) == 0:
+            raise ValueError(f"Pas d'actions disponibles pour l'état {state}.")
+
+        # Stratégie epsilon-greedy
         if np.random.rand() < self.epsilon:
             # Exploration : choisir une action aléatoire
             return np.random.randint(len(self.q_table[state]))
         else:
             # Exploitation : choisir l'action avec la plus grande valeur Q
             return np.argmax(self.q_table[state])
+
 
     def update_q_value(self, state, action, reward, next_state):
         """

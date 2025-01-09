@@ -18,7 +18,7 @@ class AnticipatoryEnvironment(HomeostaticEnvironment):
         self.current_markov_state = 0
         self.max_timestep = max_timestep
 
-    def step(self, action):
+    def step(self, action, extinction_trial=False):
         """
         Simule une étape dans l'environnement.
 
@@ -45,7 +45,7 @@ class AnticipatoryEnvironment(HomeostaticEnvironment):
             event = "injection" # Injection d'éthanol
 
         # Mettre à jour les conditions de l'environnement
-        self.update_conditions(action_taken, event)
+        self.update_conditions(action_taken, event, extinction_trial)
         self.update_state()
 
         # Calcul de la récompense (négatif si éloigné du setpoint)
@@ -58,7 +58,7 @@ class AnticipatoryEnvironment(HomeostaticEnvironment):
 
         return self.state, reward, done, self.current_markov_state, self.current_timestep
     
-    def update_conditions(self, action=None, event=None):
+    def update_conditions(self, action=None, event=None, extinction=False):
         """
         Met à jour les conditions de l'environnement.
 
@@ -71,7 +71,7 @@ class AnticipatoryEnvironment(HomeostaticEnvironment):
             else:
                 raise ValueError(f"Action inconnue : {action}")
 
-        if event is not None:
+        if event is not None and not extinction:
             if event == "injection":
                 self.injections.append(EthanolInjection(self.current_timestep + 0.5))
             else:
