@@ -8,6 +8,7 @@ class RiskAversionEnvironment(HomeostaticEnvironment):
         :param energy_threshold: Niveau d'énergie à atteindre pour terminer un épisode.
         """
         super().__init__(H, setpoints, weights, exponents, effects)
+        self.strating_energy = H.item()
         self.risky_reward = risky_reward
         self.non_risky_reward = non_risky_reward
         self.risky_prob = risky_prob
@@ -31,15 +32,17 @@ class RiskAversionEnvironment(HomeostaticEnvironment):
             energy_gain = self.risky_reward if torch.rand(1).item() < self.risky_prob else 0
             self.state += energy_gain  # Ajout en fonction de la probabilité
 
+        # Calcul de la récompense basée sur le drive
+        new_state = self.state
+        reward = self.drive.get_reward(new_state)
+
         # Mettre à jour l'état interne dans l'objet `Drive`
         self.drive.update_state(self.state)
 
-        # Calcul de la récompense basée sur le drive
-        reward = -self.drive.get_drive(self.state) * 10  # Amplifier l'effet du drive
-
         # Vérifier si l'énergie dépasse le seuil pour terminer
-        done = self.state.item() >= self.energy_threshold
+        done = self.state >= self.energy_threshold
 
+        # print(f"state : {self.current_state}, reward : {reward}, energie : {self.drive.internal_state}")
         return self.current_state, reward.item(), done, {}
 
     def reset(self):
@@ -47,6 +50,6 @@ class RiskAversionEnvironment(HomeostaticEnvironment):
         Réinitialise l'environnement pour un nouvel épisode.
         """
         self.current_state = 0  # Retour à l'état non risqué
-        self.state = self.drive.optimal_state.clone()  # Réinitialiser l'énergie interne au setpoint
+        self.state = self.strating_energy
         self.drive.update_state(self.state)
         return self.current_state
