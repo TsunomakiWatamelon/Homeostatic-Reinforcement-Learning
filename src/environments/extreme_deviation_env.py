@@ -2,7 +2,7 @@ import torch
 from environments.base_env import HomeostaticEnvironment
 
 class ExtremeDeviationEnvironment(HomeostaticEnvironment):
-    def __init__(self, H, setpoints, weights, exponents, effects, penalty_factor=0.1, deviation_threshold=20):
+    def __init__(self, H, setpoints, weights, exponents, effects):
         """
         Environnement pour l'évitement des déviations extrêmes.
         :param penalty_factor: Facteur de punition pour les déviations extrêmes.
@@ -10,8 +10,7 @@ class ExtremeDeviationEnvironment(HomeostaticEnvironment):
         """
         super().__init__(H, setpoints, weights, exponents, effects)
         self.initial_state = self.state.clone().detach()
-        self.penalty_factor = penalty_factor
-        self.deviation_threshold = deviation_threshold
+        # self.deviation_threshold = deviation_threshold
 
     def step(self, action):
         """
@@ -27,22 +26,11 @@ class ExtremeDeviationEnvironment(HomeostaticEnvironment):
         
         # Mise a jour etats interne 
         self.update_state(action=action)
-        
-        # print("reward :",reward)
-
-        # Appliquer une punition supplémentaire pour les déviations extrêmes
-        # deviation = torch.abs(self.state - self.drive.get_optimal_state())
-        # if deviation.max() > self.deviation_threshold:
-        #     reward -= self.penalty_factor * reward
-        if self.state.item() > self.deviation_threshold:
-            reward -= self.penalty_factor * reward
 
         # Mettre à jour l'état interne dans l'objet Drive
         self.drive.update_state(self.state)
 
-        # Vérifier si l'épisode est terminé (optionnel, basé sur une condition de seuil)
-        done = False  # Peut être ajusté selon le scénario
-        return 0, reward.item(), done, {}
+        return 0, reward.item(), False, {}
 
     def reset(self):
         """
