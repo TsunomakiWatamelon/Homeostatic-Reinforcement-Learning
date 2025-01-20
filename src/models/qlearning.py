@@ -20,7 +20,7 @@ class QLearning:
             self.q_table = np.zeros((state_size, action_size))
             self.is_dict = False
 
-    def choose_action(self, state):
+    def choose_action(self, state, evaluation=False):
         """
         Choisit une action en fonction de la règle softmax.
         :param state: État courant.
@@ -36,10 +36,16 @@ class QLearning:
 
         q_values = self.q_table[state]
 
-        # Appliquer la règle softmax pour calculer les probabilités
-        tau = self.temperature  # Température pour la règle softmax
-        exp_q_values = np.exp(q_values / tau)  # Exponentiation des valeurs Q
-        probabilities = exp_q_values / np.sum(exp_q_values)  # Distribution des probabilités
+        if not evaluation:
+            # Appliquer la règle softmax pour calculer les probabilités
+            tau = self.temperature  # Température pour la règle softmax
+            exp_q_values = np.exp(q_values / tau)  # Exponentiation des valeurs Q
+            probabilities = exp_q_values / np.sum(exp_q_values)  # Distribution des probabilités
+        
+        else:
+            # Softmax rule sans température pour l'évaluation
+            exp_q_values = np.exp(q_values)
+            probabilities = exp_q_values / np.sum(exp_q_values)
 
         # Choisir une action en fonction des probabilités calculées
         return np.random.choice(len(q_values), p=probabilities)
