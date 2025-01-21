@@ -2,7 +2,7 @@ import numpy as np
 import copy
 
 class QLearning:
-    def __init__(self, state_size, action_size, alpha=0.1, gamma=0.99, temperature=0.1, q_table=None):
+    def __init__(self, state_size, action_size, alpha=0.1, gamma=0.99, beta=1, q_table=None):
         """
         Implémente un agent Q-learning.
         """
@@ -10,7 +10,7 @@ class QLearning:
         self.action_size = action_size
         self.alpha = alpha  # Taux d'apprentissage
         self.gamma = gamma  # Facteur d'actualisation
-        self.temperature = temperature # Température pour la règle softmax
+        self.beta = beta  # Facteur d'exploration
 
         # Initialisation de la table Q avec des zéros
         if q_table is not None and type(q_table) == dict:
@@ -38,8 +38,7 @@ class QLearning:
 
         if not evaluation:
             # Appliquer la règle softmax pour calculer les probabilités
-            tau = self.temperature  # Température pour la règle softmax
-            exp_q_values = np.exp(q_values / tau)  # Exponentiation des valeurs Q
+            exp_q_values = np.exp(q_values * self.beta)  # Exponentiation des valeurs Q
             probabilities = exp_q_values / np.sum(exp_q_values)  # Distribution des probabilités
         
         else:
