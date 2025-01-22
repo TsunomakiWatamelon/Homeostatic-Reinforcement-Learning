@@ -2,7 +2,7 @@ import torch
 from environments.base_env import HomeostaticEnvironment
 
 class RiskAversionEnvironment(HomeostaticEnvironment):
-    def __init__(self, H, setpoints, weights, exponents, effects, risky_reward=8, non_risky_reward=2, risky_prob=0.25, env_effect = -2, max_timestep=500):
+    def __init__(self, H, setpoints, weights, exponents, effects, risky_reward=8, non_risky_reward=2, risky_prob=0.25, env_effect = -2, max_timestep=300):
         """
         Environnement pour l'expérience d'aversion au risque.
         """
