@@ -2,7 +2,7 @@ from environments.base_env import HomeostaticEnvironment
 import torch
 
 class AnticipatoryEnvironment(HomeostaticEnvironment):
-    def __init__(self, H, setpoints, weights, exponents, effects, signal_timesteps, injection_timesteps, max_timestep):
+    def __init__(self, H, setpoints, weights, exponents, effects, signal_timesteps, injection_timesteps, max_timestep, effects_mean=1, effects_std=0.05):
         """
         Environnement pour la réponse anticipatoire.
         :param signal_timesteps: Temps avant l'injection où le signal est donné.
@@ -17,6 +17,8 @@ class AnticipatoryEnvironment(HomeostaticEnvironment):
         self.markov_states = [0, 1, 2] # 1 = signal, 2 = post-injection anticipe, 3 = post-injection non anticipe
         self.current_markov_state = 0
         self.max_timestep = max_timestep
+        self.effects_mean = effects_mean
+        self.effects_std = effects_std
 
     def step(self, action, extinction_trial=False):
         """
@@ -67,13 +69,13 @@ class AnticipatoryEnvironment(HomeostaticEnvironment):
         """
         if action != None:
             if action == "anticipate":
-                self.anticipations.append(ToleranceResponse(self.current_timestep))
+                self.anticipations.append(ToleranceResponse(self.current_timestep, mean=self.effects_mean, std=self.effects_std))
             else:
                 raise ValueError(f"Action inconnue : {action}")
 
         if event is not None and not extinction:
             if event == "injection":
-                self.injections.append(EthanolInjection(self.current_timestep + 0.5))
+                self.injections.append(EthanolInjection(self.current_timestep + 0.5, mean=self.effects_mean, std=self.effects_std))
             else:
                 raise ValueError(f"Événement inconnu : {event}")
         return
@@ -112,8 +114,10 @@ class AnticipatoryEnvironment(HomeostaticEnvironment):
         return self.state, self.current_markov_state, self.current_timestep
     
 class EthanolInjection():
-    def __init__(self, injection_timestep):
+    def __init__(self, injection_timestep, mean=1, std=0.05):
         self.injection_timestep = injection_timestep
+        self.noise_mean = mean
+        self.noise_std = std
     
     def ethanol_curve(self, t):
         '''
@@ -128,8 +132,8 @@ class EthanolInjection():
             return 0
         values = {0.0: 0, 0.5: 1.05, 1.0: 1.38, 1.5: 1.36, 2.0: 1.26, 2.5: 1.12, 3.0: 1.0, 3.5: 0.90, 4.0: 0.83, 4.5: 0.75, 5.0: 0.68, 5.5: 0.61, 6.0: 0.55, 6.5: 0.49, 7.0: 0.44, 7.5: 0.39, 8.0: 0.34, 8.5: 0.3, 9.0: 0.27, 9.5: 0.23, 10.0: 0.21, 10.5: 0.18, 11.0: 0.16, 11.5: 0.14, 12.0: 0.12, 12.5: 0.1, 13.0: 0.09, 13.5: 0.08, 14.0: 0.07, 14.5: 0.06, 15.0: 0.05, 15.5: 0.05, 16.0: 0.04, 16.5: 0.03, 17.0: 0.03, 17.5: 0.02, 18.0: 0.02, 18.5: 0.02, 19.0: 0.02, 19.5: 0.01, 20.0: 0.01, 20.5: 0.01, 21.0: 0.01, 21.5: 0.01, 22.0: 0.01, 22.5: 0.01, 23.0: 0.01, 23.5: 0.01, 24.0: 0}
         
-        mean = torch.zeros(1)
-        std = torch.ones(1) * 0.05
+        mean = torch.zeros(1) * self.noise_mean
+        std = torch.ones(1) * self.noise_std
         noise = torch.normal(mean, std)
         return torch.as_tensor(-values.get(t, 0)) + noise
 
@@ -145,8 +149,10 @@ class EthanolInjection():
         return self.ethanol_curve(t - self.injection_timestep)
 
 class ToleranceResponse():
-    def __init__(self, response_timestep):
+    def __init__(self, response_timestep, mean=1, std=0.05):
         self.response_timestep = response_timestep
+        self.noise_mean = mean
+        self.noise_std = std
     
     def tolerance_response_curve(self, t):
         """
@@ -160,8 +166,8 @@ class ToleranceResponse():
         if t <= 0:
             return 0
         values = {0.0: 0.0, 0.5: 0.3, 1.0: 0.52, 1.5: 0.69, 2.0: 0.82, 2.5: 0.91, 3.0: 0.98, 3.5: 1.04, 4.0: 1.09, 4.5: 0.99, 5.0: 0.9, 5.5: 0.81, 6.0: 0.74, 6.5: 0.67, 7.0: 0.61, 7.5: 0.55, 8.0: 0.5, 8.5: 0.45, 9.0: 0.41, 9.5: 0.37, 10.0: 0.34, 10.5: 0.31, 11.0: 0.28, 11.5: 0.25, 12.0: 0.23, 12.5: 0.21, 13.0: 0.19, 13.5: 0.17, 14.0: 0.15, 14.5: 0.14, 15.0: 0.13, 15.5: 0.12, 16.0: 0.1, 16.5: 0.09, 17.0: 0.09, 17.5: 0.08, 18.0: 0.07, 18.5: 0.06, 19.0: 0.06, 19.5: 0.05, 20.0: 0.05, 20.5: 0.04, 21.0: 0.04, 21.5: 0.04, 22.0: 0.03, 22.5: 0.03, 23.0: 0.03, 23.5: 0.02, 24.0: 0.02}
-        mean = torch.zeros(1)
-        std = torch.ones(1) * 0.05
+        mean = torch.zeros(1) * self.noise_mean
+        std = torch.ones(1) * self.noise_std
         noise = torch.normal(mean, std)
         return torch.as_tensor(values.get(t, 0)) + noise
 
