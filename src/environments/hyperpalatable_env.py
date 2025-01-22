@@ -36,11 +36,14 @@ class HyperpalatableEnvironment(HomeostaticEnvironment):
         if normal:  # Nourriture normale
             self.state[0] += self.normal_food_reward
         elif hyper == 1:  # Nourriture hyperpalatable
-            self.state[0] += self.normal_food_reward + self.palatability_bonus
+            self.state[0] += self.normal_food_reward #+ self.palatability_bonus
 
         # Calcule de la récompense 
         new_state = self.state[0]
         reward = self.drive.get_reward(new_state)
+
+        if hyper == 1:
+            reward += self.palatability_bonus
 
         # Mise à jour de l'état interne dans l'objet Drive
         self.drive.update_state(self.state)
